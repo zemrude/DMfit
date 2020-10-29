@@ -1,4 +1,8 @@
-
+import abc
+from typing import Dict, List, Optional, Iterable, Mapping, Any, Tuple, Union
+import numpy as np
+   
+    
 
 class Parameter():
     """ Parameter class """
@@ -70,8 +74,9 @@ class Parameter():
     
         
     def __str__(self):
-        line = [" Name: {}".format(str(self.name))]
-        line.append(" Value: {}".format(str(self._value)))
-        line.append(" Limits: ({}, {})".format(str(self.limits[0]), str(self.limits[1])))
-        line.append(" Is fixed? {}".format(self.fixed))
-        return "\n".join(line)
+        lines = []
+        lines.append(" Name: {}".format(str(self.name)))
+        lines.append(" Value: {}".format(str(self._value)))
+        lines.append(" Limits: ({}, {})".format(str(self.limits[0]), str(self.limits[1])))
+        lines.append(" Is fixed? {}".format(self.fixed))
+        return "\n".join(lines)
