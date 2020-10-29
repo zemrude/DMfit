@@ -2,7 +2,7 @@ import abc
 from typing import Dict, List, Optional, Iterable, Mapping, Any, Tuple, Union
 import numpy as np
 import collections
-
+import itertools 
    
 from .parameter import Parameter    
     
@@ -177,6 +177,10 @@ class Model():
     @expression.setter
     def expression(self, value: str):
         self._meta_data["expression"] = str(value)
+        
+    def __len__(self):
+        #To do check if the _pdfs is initiated
+        return len(self._pdfs[0])
     
     def __getitem__(self, index: int):
         expression = self.expression
@@ -191,8 +195,24 @@ class Model():
         elif isinstance(other, PdfBase):
             expression = "{} + self._pdfs['{}'][index]".format(self.expression, other.name)
             name = "{} + {}".format(self.name, other.name)
-            m = Model(pdfs=[self._pdfs + other], parameters=self._parameters, name=name, expression=expression)
+            m = Model(pdfs=[list(self._pdfs.values()) + other], parameters=list(self._parameters.values()), name=name, expression=expression)
             return m
+        
+        elif isinstance(other, Model):
+            expression = "{} + {}".format(self.expression, other.expression)
+            name = "{} + {}".format(self.name, other.name)
+            pdfs_self = list(self._pdfs.values())
+            pdfs_other = list(other._pdfs.values())
+            pdfs = list(itertools.chain(pdfs_self, pdfs_other))
+            param_self = list(self._parameters.values())
+            param_other = list(other._parameters.values())
+            param = list(itertools.chain(param_self, param_other))
+            
+            
+            m = Model(pdfs=pdfs, parameters=param, name=name, expression=expression)
+            return m
+        
+        
         
     def __radd__(self, other):
         return self.__add__(other)
