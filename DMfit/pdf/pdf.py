@@ -188,11 +188,8 @@ class Model():
         return eval(expression, {}, variables)
             
     def __add__(self, other):
-        if isinstance(other, int) or isinstance(other, float):
-            frequencies = other + self._frequencies
-            return frequencies
-
-        elif isinstance(other, PdfBase):
+        
+        if isinstance(other, PdfBase):
             expression = "{} + self._pdfs['{}'][index]".format(self.expression, other.name)
             name = "{} + {}".format(self.name, other.name)
             m = Model(pdfs=[list(self._pdfs.values()) + other], parameters=list(self._parameters.values()), name=name, expression=expression)
@@ -216,3 +213,28 @@ class Model():
         
     def __radd__(self, other):
         return self.__add__(other)
+
+    def __sub__(self, other):
+        if isinstance(other, PdfBase):
+            expression = "{} - self._pdfs['{}'][index]".format(self.expression, other.name)
+            name = "{} - {}".format(self.name, other.name)
+            m = Model(pdfs=[list(self._pdfs.values()) + other], parameters=list(self._parameters.values()), name=name, expression=expression)
+            return m
+        
+        elif isinstance(other, Model):
+            expression = "{} - {}".format(self.expression, other.expression)
+            name = "{} - {}".format(self.name, other.name)
+            pdfs_self = list(self._pdfs.values())
+            pdfs_other = list(other._pdfs.values())
+            pdfs = list(itertools.chain(pdfs_self, pdfs_other))
+            param_self = list(self._parameters.values())
+            param_other = list(other._parameters.values())
+            param = list(itertools.chain(param_self, param_other))
+            
+            
+            m = Model(pdfs=pdfs, parameters=param, name=name, expression=expression)
+            return m
+        
+    def __rsub__(self, other):
+        return self.__sub__(other)
+        
