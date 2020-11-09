@@ -73,7 +73,55 @@ class Parameter():
         else:
             self._limits[0] = value
     
+    
+    def __add__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            expression = "self._parameters['{}'].value + {}".format(self.name, other)
+            name = "{}+{}".format(other, self.name)
+            m = Model(parameters = [self], name=name, expression=expression)
+            return m
+
+        elif isinstance(other, Parameter):
+            expression = "self._parameters['{}'].value + self._parameters['{}'].value".format(other.name, self.name)
+            name = "{}+{}".format(other.name, self.name)
+            m = Model(parameters=[self, other], name=name, expression=expression)
+            return m
         
+    def __radd__(self, other):
+        return __add__(other)
+    
+    
+    def __sub__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            expression = "self._parameters['{}'].value - {}".format(self.name, other)
+            name = "{}-{}".format(self.name, other)
+            m = Model(parameters = [self], name=name, expression=expression)
+            return m
+
+        elif isinstance(other, Parameter):
+            expression = "self._parameters['{}'].value - self._parameters['{}'].value".format(self.name, other.name)
+            name = "{}-{}".format(self.name, other.name)
+            m = Model(parameters=[self, other], name=name, expression=expression)
+            return m
+        
+    def __rsub__(self, other):
+        if isinstance(other, int) or isinstance(other, float):
+            expression = "{} - self._parameters['{}'].value".format(other, self.name)
+            name = "{}-{}".format(other, self.name)
+            m = Model(parameters = [self], name=name, expression=expression)
+            return m
+
+        elif isinstance(other, Parameter):
+            expression = "self._parameters['{}'].value - self._parameters['{}'].value".format(other.name, self.name)
+            name = "{}-{}".format(other.name,self.name)
+            m = Model(parameters=[self, other], name=name, expression=expression)
+            return m
+        
+        
+
+    
+    
+    
     def __str__(self):
         lines = []
         lines.append(" Name: {}".format(str(self.name)))
@@ -173,8 +221,10 @@ class PdfBase(abc.ABC):
 
     def __add__(self, other):
         if isinstance(other, int) or isinstance(other, float):
-            frequencies = other + self._frequencies
-            return frequencies
+            expression = "{} + self._pdfs['{}'][index]".format(other, self.name)
+            name = "{}+{}".format(other, self.name)
+            m = Model(pdfs = [self], name=name, expression=expression)
+            return m
 
         elif isinstance(other, Parameter):
             expression = "self._parameters['{}'].value + self._pdfs['{}'][index]".format(other.name, self.name)
@@ -199,6 +249,7 @@ class Model():
         self._pdfs = collections.OrderedDict()
         self._parameters = collections.OrderedDict()
        
+        
         if pdfs is not None:
             for pdf in pdfs:
                 self._add_pdf(pdf)
@@ -251,9 +302,9 @@ class Model():
         """Name of the histogram (stored in meta-data)."""
         return self._meta_data.get("expression", None)
     
-    @expression.setter
-    def expression(self, value: str):
-        self._meta_data["expression"] = str(value)
+    #@expression.setter
+    #def expression(self, value: str):
+    #    self._meta_data["expression"] = str(value)
         
     def __len__(self):
         #To do check if the _pdfs is initiated
@@ -265,10 +316,32 @@ class Model():
         return eval(expression, {}, variables)
     def __mul__(self, other):
         """If we multiply by a float or a int, the method returns simply the frequencies multiplied """
+       
+        if isinstance(other, Model):
+            expression = "({}) * ({})".format(self.expression, other.expression)
+            name = "({})*({})".format(self.name, other.name)
+            pdfs_self = list(self._pdfs.values())
+            pdfs_other = list(other._pdfs.values())
+            pdfs = list(itertools.chain(pdfs_self, pdfs_other))
+            param_self = list(self._parameters.values())
+            param_other = list(other._parameters.values())
+            param = list(itertools.chain(param_self, param_other))
+            m = Model(pdfs = pdfs, parameters= param, name=name, expression=expression)
+            return m
         
+        if isinstance(other, PdfBase):
+            expression = "({}) * self._pdfs['{}'][index]".format(self.expression, other.name)
+            name = "({}) * {}".format(self.name, other.name)
+            
+            pdfs_self = list(self._pdfs.values())
+            pdfs = list(itertools.chain(pdfs_self, [other]))
+            
+            m = Model(pdfs=pdfs, parameters=list(self._parameters.values()), name=name, expression=expression)
+            return m
+           
         if isinstance(other, Parameter):
-            expression = "self._parameters['{}'].value * {}".format(other.name, self.expression)
-            name = "{}*{}".format(other.name, self.name)
+            expression = "self._parameters['{}'].value * ({})".format(other.name, self.expression)
+            name = "{}*({})".format(other.name, self.name)
             pdfs = list(self._pdfs.values())
             param_self = list(self._parameters.values())
             param = list(itertools.chain(param_self, [other]))
@@ -333,4 +406,14 @@ class Model():
         
     def __rsub__(self, other):
         return self.__sub__(other)
-        
+    
+    def __str__(self):
+        lines = []
+        lines.append(" Model: {}".format(self.name))
+        lines.append(" Number of pdf: {}".format(len(self._pdfs.keys())))
+        for key in self._pdfs.keys():
+            lines.append(" - {}".format(key))
+        lines.append(" Number of parameters: {}".format(len(self._parameters.keys())))
+        for key, param in self._parameters.items():
+            lines.append(" - {}, limits = ({},{}),  Is it Fixed? {}".format(key, param.limits[0], param.limits[1], param.fixed))
+        return "\n".join(lines)
