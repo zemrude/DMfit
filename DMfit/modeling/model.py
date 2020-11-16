@@ -4,6 +4,9 @@ import numpy as np
 import collections
 import itertools 
 
+
+__all__ = ["Model"]
+
 class Model():
     
     def __init__(self, pdfs = None, parameters = None, **kwargs):
@@ -26,8 +29,7 @@ class Model():
             name = param.name
             
             if name  in self._parameters.keys():
-                print (r"Parameter {} already exists in the model!".format(name))
-
+                print (r"Parameter {} already exists in the model, it won't be added again".format(name))
             else:
                 self._parameters[name] = param
             
@@ -39,7 +41,7 @@ class Model():
         if isinstance(pdf, PdfBase):
             name = pdf.name
             if name  in self._pdfs.keys():
-                print (r"PDF {} already exists in the model!".format(name))
+                print (r"PDF {} already exists in the model, it won't be added again".format(name))
             else:
                 self._pdfs[name] = pdf
             
@@ -60,12 +62,9 @@ class Model():
     
     @property
     def expression(self) -> Optional[str]:
-        """Name of the histogram (stored in meta-data)."""
+        """Expression used in the evaluation. There is no setter, expression is only built in the __init__."""
         return self._meta_data.get("expression", None)
     
-    #@expression.setter
-    #def expression(self, value: str):
-    #    self._meta_data["expression"] = str(value)
         
     def __len__(self):
         #To do check if the _pdfs is initiated
@@ -75,9 +74,9 @@ class Model():
         expression = self.expression
         variables = {"index" : index, "self": self}
         return eval(expression, {}, variables)
+   
     def __mul__(self, other):
-        """If we multiply by a float or a int, the method returns simply the frequencies multiplied """
-       
+        
         if isinstance(other, Model):
             expression = "({}) * ({})".format(self.expression, other.expression)
             name = "({})*({})".format(self.name, other.name)

@@ -4,7 +4,7 @@ import numpy as np
 import collections
 import itertools 
 
-
+__all__ = ["Parameter"]
 
 class Parameter():
     """ Parameter class """
@@ -24,7 +24,6 @@ class Parameter():
     
     @property
     def name(self) -> Optional[str]:
-        
         return self._meta_data.get("name", None)
     
     @name.setter
@@ -39,12 +38,22 @@ class Parameter():
     @value.setter
     def value(self, value: float):
         """Name of the histogram (stored in meta-data)."""
-        
         if self.limits[0] <= value <= self.limits[1]:
             self._value = value
         else:
             raise ValueError(" Value {} is not between limits ({}, {})".format(value, self.limits[0], self.limits[1]))
    
+
+    @property
+    def fixed(self) -> boolean:
+        return self._fixed
+
+    @fixed.setter
+    def fixed(self, value: bool):
+        if not isinstance(val, bool):
+            raise TypeError(f"Invalid type: {value}, {type(value)}")
+        self._fixed = value
+
     @property
     def limits(self) -> np.ndarray:
         return self._limits
