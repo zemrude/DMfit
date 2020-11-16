@@ -7,7 +7,10 @@ import itertools
 __all__ = ["Parameter"]
 
 class Parameter():
-    """ Parameter class """
+    """ Parameter class 
+    To do: Add priors
+    
+    """
     
     def __init__(self, name, value, limits, fixed, **kwargs):
         
@@ -45,7 +48,7 @@ class Parameter():
    
 
     @property
-    def fixed(self) -> boolean:
+    def fixed(self) -> bool:
         return self._fixed
 
     @fixed.setter
