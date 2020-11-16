@@ -53,7 +53,7 @@ class Parameter():
 
     @fixed.setter
     def fixed(self, value: bool):
-        if not isinstance(val, bool):
+        if not isinstance(value, bool):
             raise TypeError(f"Invalid type: {value}, {type(value)}")
         self._fixed = value
 
