@@ -66,9 +66,12 @@ class Model():
         return self._meta_data.get("expression", None)
     
         
-    def __len__(self):
+    def __len__(self) -> int:
         #To do check if the _pdfs is initiated
-        return len(self._pdfs[0])
+        if len(self._pdfs.keys()) == 0:
+            raise AttributeError("Model is empty")
+        else: 
+            return next(iter(self._pdfs.values())).nbins
     
     def __getitem__(self, index: int):
         expression = self.expression
