@@ -65,6 +65,9 @@ class Model():
         """Expression used in the evaluation. There is no setter, expression is only built in the __init__."""
         return self._meta_data.get("expression", None)
     
+    @property
+    def nparameters(self) -> int:
+        return len(self._parameters.keys())
         
     def __len__(self) -> int:
         #To do check if the _pdfs is initiated
@@ -79,7 +82,7 @@ class Model():
         return eval(expression, {}, variables)
    
     def __mul__(self, other):
-        
+        m = None
         if isinstance(other, Model):
             expression = "({}) * ({})".format(self.expression, other.expression)
             name = "({})*({})".format(self.name, other.name)
@@ -90,8 +93,7 @@ class Model():
             param_other = list(other._parameters.values())
             param = list(itertools.chain(param_self, param_other))
             m = Model(pdfs = pdfs, parameters= param, name=name, expression=expression)
-            return m
-        
+          
         if isinstance(other, PdfBase):
             expression = "({}) * self._pdfs['{}'][index]".format(self.expression, other.name)
             name = "({}) * {}".format(self.name, other.name)
@@ -100,7 +102,6 @@ class Model():
             pdfs = list(itertools.chain(pdfs_self, [other]))
             
             m = Model(pdfs=pdfs, parameters=list(self._parameters.values()), name=name, expression=expression)
-            return m
            
         if isinstance(other, Parameter):
             expression = "self._parameters['{}'].value * ({})".format(other.name, self.expression)
@@ -109,7 +110,7 @@ class Model():
             param_self = list(self._parameters.values())
             param = list(itertools.chain(param_self, [other]))
             m = Model(pdfs = pdfs, parameters= param, name=name, expression=expression)
-            return m
+        return m
     
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -118,14 +119,30 @@ class Model():
     
     def __add__(self, other):
         
-        if isinstance(other, PdfBase):
+        m = None
+        
+        if isinstance(other, int) or isinstance(other, float):
+            expression = "{} + {}".format(other, self.expression)
+            name = "{} + {}".format(other, self.name)
+            pdfs = list(self._pdfs.values())
+            params = list(self._parameters.values())
+            m = Model(pdfs = pdfs, parameters = params, name=name, expression=expression)
+                
+        elif isinstance(other, Parameter):
+            expression = "self._parameters['{}'].value + {}".format(other.name, self.expression)
+            name = "{} + {}".format(other.name, self.name)
+            pdfs = list(self._pdfs.values())
+            param_self = list(self._parameters.values())
+            param = list(itertools.chain(param_self, [other]))
+            m = Model(pdfs = pdfs, parameters= param, name=name, expression=expression)
+        
+        elif isinstance(other, PdfBase):
             expression = "{} + self._pdfs['{}'][index]".format(self.expression, other.name)
             name = "{} + {}".format(self.name, other.name)
             pdfs_self = list(self._pdfs.values())
             pdfs = list(itertools.chain(pdfs_self, other))
             
             m = Model(pdfs=pdfs, parameters=list(self._parameters.values()), name=name, expression=expression)
-            return m
         
         elif isinstance(other, Model):
             expression = "{} + {}".format(self.expression, other.expression)
@@ -139,7 +156,8 @@ class Model():
             
             
             m = Model(pdfs=pdfs, parameters=param, name=name, expression=expression)
-            return m
+        
+        return m
         
         
         
@@ -147,12 +165,28 @@ class Model():
         return self.__add__(other)
 
     def __sub__(self, other):
-        if isinstance(other, PdfBase):
+        m = None
+        
+        if isinstance(other, int) or isinstance(other, float):
+            expression = "{} - {}".format(other, self.expression)
+            name = "{} - {}".format(other, self.name)
+            pdfs = list(self._pdfs.values())
+            params = list(self._parameters.values())
+            m = Model(pdfs = pdfs, parameters = params, name=name, expression=expression)
+        
+        elif isinstance(other, Parameter):
+            expression = "{} - self._parameters['{}'].value".format(self.expression, other.name)
+            name = "{} - {}".format(self.name, other.name)
+            pdfs = list(self._pdfs.values())
+            param_self = list(self._parameters.values())
+            param = list(itertools.chain(param_self, [other]))
+            m = Model(pdfs = pdfs, parameters= param, name=name, expression=expression)
+        
+        elif isinstance(other, PdfBase):
             expression = "{} - self._pdfs['{}'][index]".format(self.expression, other.name)
             name = "{} - {}".format(self.name, other.name)
             m = Model(pdfs=[list(self._pdfs.values()) + other], parameters=list(self._parameters.values()), name=name, expression=expression)
-            return m
-        
+         
         elif isinstance(other, Model):
             expression = "{} - {}".format(self.expression, other.expression)
             name = "{} - {}".format(self.name, other.name)
@@ -165,7 +199,7 @@ class Model():
             
             
             m = Model(pdfs=pdfs, parameters=param, name=name, expression=expression)
-            return m
+        return m
         
     def __rsub__(self, other):
         return self.__sub__(other)

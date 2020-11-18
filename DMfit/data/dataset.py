@@ -6,10 +6,13 @@ import itertools
 
 #__all__ = ["DataSet"]
 
+DATATYPES = ["unblinding", "simulation", "scrambling"]
 
 class DataSet():
     
     def __init__(self, values = None, errors2 = None, data_type = "simulation",  **kwargs):
+        
+        self.ntotal = 0
         
         if values is not None:
             values = np.asarray(values)
@@ -20,7 +23,7 @@ class DataSet():
             self.errors2 = errors2
         
         self.data_type = data_type
-       
+        
 
     
     @property
@@ -32,10 +35,11 @@ class DataSet():
         
     @values.setter
     def values(self, values: np.ndarray) -> None:
+        values = np.asarray(values)
         if np.any(values < 0):
             raise ValueError("Cannot have negative values in the pdf.")
-           
         self._values = values
+        self.ntotal = np.sum(self._values)
         
         
     @property
@@ -50,7 +54,7 @@ class DataSet():
         if np.any(errors2 < 0):
             raise ValueError("Cannot have negative errors2")
         
-        self._errors2 = errors2
+        self._errors2 = np.asarray(errors2)
    
     def fill_errors2(self):
         """ Fill errors as sqrt(n) """
@@ -61,8 +65,24 @@ class DataSet():
         return self._data_type
     
     @data_type.setter
-    def data_type(self, value : str)
+    def data_type(self, value: str):
         if value not in DATATYPES:
             raise ErrorValue("Data type {} not implemented".format(str(value)))
         else:
             self._data_type = str(value)
+            
+            
+    def residuals(self, model):
+        return self._values - model[:]
+    
+    
+    def sample(self, ntotal, model):
+        "Makes a pseudo sample"
+        self.values = list(map(np.random.poisson, ntotal * model[:]))
+
+
+    def __str__(self):
+        lines = []
+        lines.append("DataSet type {}".format(self._data_type))
+        lines.append("Total number of events: {}".format(self.ntotal))
+        return "\n".join(lines)
