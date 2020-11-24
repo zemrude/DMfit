@@ -3,8 +3,9 @@ from typing import Dict, List, Optional, Iterable, Mapping, Any, Tuple, Union
 import numpy as np
 import collections
 import itertools 
+from utils.numba_functions import nb_log, nb_sum, nb_where, nb_random_poisson
 
-#__all__ = ["DataSet"]
+__all__ = ["DataSet"]
 
 DATATYPES = ["unblinding", "simulation", "scrambling"]
 
@@ -78,7 +79,8 @@ class DataSet():
     
     def sample(self, ntotal, model):
         "Makes a pseudo sample"
-        self.values = list(map(np.random.poisson, ntotal * model[:]))
+       
+        self.values = list(map(nb_random_poisson, ntotal * np.asarray(model)))
 
 
     def __str__(self):
