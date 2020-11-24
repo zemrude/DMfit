@@ -9,18 +9,39 @@ __all__ = ["Parameter"]
 class Parameter():
     """ Parameter class 
     To do: Add priors
+    To do: Add scale
     
+    This idea is taking from Gammapy and is implented as such
+    
+    value = factor x scale
+
+    scale only takes values of 0.01, 0.1, 1, 10, etc..
+    
+
     """
     
-    def __init__(self, name, value, limits, fixed, **kwargs):
+    def __init__(self, name, value, limits, scale = 1, fixed = False, is_nuisance = False, **kwargs):
         
-        limits = np.asarray(limits)
-        self.limits = limits
         self.fixed = fixed
         self._meta_data = kwargs.copy()
+        #First we fixed the scale
+        
+        if not np.log10(scale).is_integer():
+            print ("Scale can only take as value power of 10.")
+        else:
+            self._scale = scale
+        
+        #Value will only set the factor, once the scale is fixed
         self.value = value
-        self.name = name
+      
     
+        limits = np.asarray(limits)
+        self.limits = limits
+      
+    
+        self.name = name
+        self.is_nuisance = is_nuisance
+        
     @property    
     def meta_data(self) -> dict:
         return self._meta_data
@@ -35,18 +56,39 @@ class Parameter():
     
     @property
     def value(self) -> float:
-        """Name of the histogram (stored in meta-data)."""
-        return self._value
+        return self._factor * self._scale
     
     @value.setter
     def value(self, value: float):
-        """Name of the histogram (stored in meta-data)."""
-        if self.limits[0] <= value <= self.limits[1]:
-            self._value = value
+        self.factor = float(value) / self._scale
+ 
+    @property
+    def scale(self) -> float:
+        return self._scale
+    
+    @scale.setter
+    def scale(self, val: float):
+        value = self.value
+        limits = self.limits
+        
+        if not np.log10(val).is_integer():
+            print ("Scale can only take as value power of 10.")
         else:
-            raise ValueError(" Value {} is not between limits ({}, {})".format(value, self.limits[0], self.limits[1]))
-   
+            self._scale = val 
+            #we change the scale, but not factor, so that could lead to a change of value!
+            self._factor = float(value) / self._scale
+            #Same for the limits
+            self._factor_limits = limits / self._scale
+            
+    @property
+    def factor(self) -> float:
+        return self._factor
+    
+    @factor.setter
+    def factor(self, value: float):
+        self._factor = value
 
+        
     @property
     def fixed(self) -> bool:
         return self._fixed
@@ -58,8 +100,18 @@ class Parameter():
         self._fixed = value
 
     @property
+    def is_nuisance(self) -> bool:
+        return self._is_nuisance
+
+    @is_nuisance.setter
+    def is_nuisance(self, value: bool):
+        if not isinstance(value, bool):
+            raise TypeError(f"Invalid type: {value}, {type(value)}")
+        self._is_nuisance = value
+
+    @property
     def limits(self) -> np.ndarray:
-        return self._limits
+        return self._factor_limits * self._scale
     
     @limits.setter
     def limits(self, limits: np.ndarray):
@@ -68,29 +120,44 @@ class Parameter():
         elif limits[0] >= limits[1]:
             raise ValueError( "Lower limit is equal or greater than upper limit")
         else:
-            self._limits = limits
+            self.factor_limits = limits / self._scale
     
     @property
     def upper_limit(self) -> float:
-        return self._limits[1]
+        return self.limits[1]
     
     @property
     def lower_limit(self) -> float:
-        return self._limits[0]
+        return self.limits[0]
     
     @upper_limit.setter
     def upper_limit(self, value : float):
         if value < self._limits[0]:
             raise ValueError( " Upper limit {} is smaller than lower limit {}".format(value, self._limits[0]))
         else:
-            self._limits[1] = value
+            self._factor_limits[1] = value / self._scale
     
     @lower_limit.setter
     def lower_limit(self, value : float):
         if value > self._limits[1]:
             raise ValueError( " Lower limit {} is greater than upper limit {}".format(value, self._limits[1]))
         else:
-            self._limits[0] = value
+            self._factor_limits[0] = value / self._scale
+    
+            
+    @property
+    def factor_limits(self) -> np.ndarray:
+        return self._factor_limits
+    
+    @factor_limits.setter
+    def factor_limits(self, limits: np.ndarray):
+        if ( len(limits) != 2 ):
+            raise ValueError( "Limits need a dim = 2")
+        elif limits[0] >= limits[1]:
+            raise ValueError( "Lower limit is equal or greater than upper limit")
+        else:
+            self._factor_limits = limits
+    
     
     
     def __add__(self, other):
@@ -137,13 +204,25 @@ class Parameter():
             return m
         
     
+    def autoscale(self):
+        #We set the scale based on the value
+        value = self.value
+        if value != 0:
+            exponent = np.floor(np.log10(np.abs(value)))
+            scale = np.power(10.0, exponent)
+            self.scale = scale
+            self.value = value
+          
+    
     def __str__(self):
         lines = []
         lines.append(" Name: {}".format(str(self.name)))
-        lines.append(" Value: {}".format(str(self._value)))
-        lines.append(" Limits: ({}, {})".format(str(self.limits[0]), str(self.limits[1])))
-        lines.append(" Is fixed? {}".format(self.fixed))
-        return "\n".join(lines)
+        lines.append(" Value: {:.2f}".format(self.value))
+        lines.append(" Scale: {:.1e}".format(self.scale))
+        lines.append(" Limits: ({:.1f}, {:.1f})".format(self.limits[0], self.limits[1]))
+        lines.append(" Fixed: {}".format(self.fixed))
+        lines.append(" Is nuisance? {}".format(self.is_nuisance))
+        return ",".join(lines)
 
     
 from .model import Model

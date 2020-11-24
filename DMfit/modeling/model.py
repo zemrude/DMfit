@@ -12,17 +12,20 @@ class Model():
     def __init__(self, pdfs = None, parameters = None, **kwargs):
         self._pdfs = collections.OrderedDict()
         self._parameters = collections.OrderedDict()
-       
+     
+        self._meta_data = kwargs.copy()
+     
         
         if pdfs is not None:
             for pdf in pdfs:
                 self._add_pdf(pdf)
+            
+        
         if parameters is not None:    
             for param in parameters:
                 self._add_parameter(param)
+
         
-        self._meta_data = kwargs.copy()
-                
     def _add_parameter(self, param):
     
         if isinstance(param, Parameter):
@@ -34,9 +37,6 @@ class Model():
                 self._parameters[name] = param
             
     def _add_pdf(self, pdf):
-        
-        
-        
         
         if isinstance(pdf, PdfBase):
             name = pdf.name
@@ -59,6 +59,30 @@ class Model():
     def name(self, value: str):
         self._meta_data["name"] = str(value)
     
+
+    @property
+    def description(self) -> Optional[str]:
+        return self._meta_data.get("description", None)
+   
+    @description.setter
+    def description(self, value: str):
+        self._meta_data["description"] = str(value)
+    
+    @property
+    def parameters(self) -> collections.OrderedDict:
+        return self._parameters
+    
+    @property
+    def pdfs(self) -> collections.OrderedDict:
+        return self._pdfs
+    
+    @property
+    def free_parameters(self) -> collections.OrderedDict:
+        return collections.OrderedDict([(name, par) for name, par in list(self._parameters.items()) if par.fixed == False])
+
+    @property
+    def nuisance_parameters(self) -> collections.OrderedDict:
+        return collections.OrderedDict([(name, par) for name, par in list(self._parameters.items()) if par.is_nuisance == True])
     
     @property
     def expression(self) -> Optional[str]:
@@ -66,7 +90,7 @@ class Model():
         return self._meta_data.get("expression", None)
     
     @property
-    def nparameters(self) -> int:
+    def npars(self) -> int:
         return len(self._parameters.keys())
         
     def __len__(self) -> int:
@@ -76,11 +100,24 @@ class Model():
         else: 
             return next(iter(self._pdfs.values())).nbins
     
+    """
+    def _load(self):
+        Rationale of this is that we load the values into a an array, that way evaluation should be faster
+        Drawbacks, changing a value of a parameter should have to reload"
+        
+        Does not work: you cannot call this function after updating a parameter value 
+        
+        for index in range(self.__len__()):
+            variables = {"index" : index, "self" : self}
+            self._values[index] = np.maximum(0, eval(self.expression, {}, variables))    
+    """
+        
     def __getitem__(self, index: int):
         expression = self.expression
         variables = {"index" : index, "self": self}
-        return eval(expression, {}, variables)
-   
+        #Only return positive values from a Model
+        return np.maximum(0, eval(expression, {}, variables))
+    
     def __mul__(self, other):
         m = None
         if isinstance(other, Model):
@@ -212,7 +249,8 @@ class Model():
             lines.append(" - {}".format(key))
         lines.append(" Number of parameters: {}".format(len(self._parameters.keys())))
         for key, param in self._parameters.items():
-            lines.append(" - {}, limits = ({},{}),  Is it Fixed? {}".format(key, param.limits[0], param.limits[1], param.fixed))
+            #lines.append(" - {}, limits = ({},{}),  value = {}, Is it Fixed? {}".format(key, param.limits[0], param.limits[1], param.value, param.fixed))
+            lines.append(param.__str__())
         return "\n".join(lines)
     
     
