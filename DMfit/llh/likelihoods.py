@@ -16,36 +16,32 @@ HYPOTHESIS = {'H0': 0, 'H1': 1}
 class LikelihoodRatioTest:
     def __init__(self, model = None, null_model = None, llh_type = "Poisson", data = None, **kwargs):
 
+        self.data = data
         #Ratio test is H0, H1
         self._models = {"H0" : null_model, 
                         "H1" : model}
              
 
-        llhs = {"H0" : self.llhH0, 
-                "H1" : self.llhH1}
+                     
+        self._llhs = {"H0" : self.llhH0, 
+                      "H1" : self.llhH1}
         
         self._minimizers = {"H0" : None,
                             "H1" : None}
         
-        kwds = dict()
-        kwds['errordef'] = Minuit.LIKELIHOOD 
-        kwds['print_level'] = 2.
-        z = {**kwds, **kwargs}
-         
-            
-        #Minimizer work in factor space, not in value space
         
-        for i, m in enumerate(self._models.values()):
-            names = ([par.name for par in list(m.parameters.values())])
-            limits = ([par.factor_limits for par in list(m.parameters.values())])
-            init_values = ([par.factor for par in list(m.parameters.values())])
-            self._minimizers[list(self._minimizers.keys())[i]] = Minuit.from_array_func(llhs[list(self._minimizers.keys())[i]], init_values, limit = limits, name = names, **z)
+        
+        
         
         self.llh_type = llh_type
         self._meta_data = kwargs.copy()
-        self.data = data
+       
         
- 
+
+    @property
+    def llhs(self) -> dict:
+        return self._llhs
+
         
     @property    
     def meta_data(self) -> dict:
@@ -90,22 +86,34 @@ class LikelihoodRatioTest:
             self._llh_type = value
         else:
             raise ValueError("Likelihood type {} is not implented, available likelihoods are {}".format(value, LIKELIHOODS))
-    
-    
+
         
-    def fitH0(self, **kwargs):
-        return self.minimizers["H0"].migrad(**kwargs) 
-  
+    def fit(self, hypothesis, **kwargs):
+        
+        kwds = dict()
+        kwds['errordef'] = Minuit.LIKELIHOOD 
+        #kwds['print_level'] = 2.
+        z = {**kwds, **kwargs}
+         
             
-    def fitH1(self, **kwargs):
-        return self.minimizers["H1"].migrad(**kwargs) 
+        #Minimizer work in factor space, not in value space
+        
+        
+        names, init_values, limits, fixed = np.transpose([(par.name, par.value, par.limits, par.fixed) for par in list(self._models[hypothesis].parameters.values())])
+
+               
+        self._minimizers[hypothesis] = Minuit.from_array_func(self._llhs[hypothesis], init_values, fix = fixed, limit = limits, name = names, **z)
+        
+        
+        return self.minimizers[hypothesis].migrad(**kwargs) 
+  
 
     @property
     def minLlhH1(self):
         try:
             return self.minimizers["H1"].fmin.fval
         except:
-            raise AttributeError("You need to run .fit_H1 fist")
+            raise AttributeError("You need to run .fit('H1') fist")
 
     @property
     def minLlhH0(self):
@@ -127,6 +135,10 @@ class LikelihoodRatioTest:
         return self._llh(pars, model = self._models["H0"])
     
     def llhH1(self, pars):
+        """
+        Wrapper function to _llh for Minuit
+        """
+        
         return self._llh(pars, model = self._models["H1"])
     
     
