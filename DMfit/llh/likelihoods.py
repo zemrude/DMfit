@@ -21,14 +21,14 @@ class LikelihoodRatioTest:
                         "H1" : model}
              
 
-        llhs = {"H0" : self.llh_h0, 
-                "H1" : self.llh_h1}
+        llhs = {"H0" : self.llhH0, 
+                "H1" : self.llhH1}
         
         self._minimizers = {"H0" : None,
                             "H1" : None}
         
         kwds = dict()
-        kwds['errordef'] = .5 #for likelihood functions.
+        kwds['errordef'] = Minuit.LIKELIHOOD 
         kwds['print_level'] = 2.
         z = {**kwds, **kwargs}
          
@@ -60,11 +60,11 @@ class LikelihoodRatioTest:
         return self._minimizers
     
     @property
-    def minimizer_H0(self, tag) -> Minuit:
+    def minimizerH0(self, tag) -> Minuit:
         return self._minimizers["H0"]
 
     @property
-    def minimizer_H1(self, tag) -> Minuit:
+    def minimizerH1(self, tag) -> Minuit:
         return self._minimizers["H1"]
 
     @property
@@ -93,11 +93,11 @@ class LikelihoodRatioTest:
     
     
         
-    def fit_H0(self, **kwargs):
+    def fitH0(self, **kwargs):
         return self.minimizers["H0"].migrad(**kwargs) 
   
             
-    def fit_H1(self, **kwargs):
+    def fitH1(self, **kwargs):
         return self.minimizers["H1"].migrad(**kwargs) 
 
     @property
@@ -119,15 +119,17 @@ class LikelihoodRatioTest:
         return 2 * (self.minLlhH0 - self.minLlhH1)
         
             
-    def llh_h0(self, pars):
+    def llhH0(self, pars):
         """
         Wrapper function to _llh for Minuit
         
         """
         return self._llh(pars, model = self._models["H0"])
     
-    def llh_h1(self, pars):
+    def llhH1(self, pars):
         return self._llh(pars, model = self._models["H1"])
+    
+    
         
     def _llh(self, pars, model = None):
         """ Likelihood evaluation using the numba module 
