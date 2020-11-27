@@ -18,8 +18,13 @@ class LikelihoodRatioTest:
 
         self.data = data
         #Ratio test is H0, H1
-        self._models = {"H0" : null_model, 
-                        "H1" : model}
+        self._models = collections.OrderedDict()
+
+        if model is not None and null_model is not None:
+            if isinstance(null_model, Model):
+                self._models["H0"]  = null_model.copy()
+            if isinstance(model, Model):
+                self._models["H1"] = model.copy()
              
 
                      

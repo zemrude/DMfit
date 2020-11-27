@@ -2,7 +2,8 @@ import abc
 from typing import Dict, List, Optional, Iterable, Mapping, Any, Tuple, Union
 import numpy as np
 import collections
-import itertools 
+import itertools
+import copy
 
 __all__ = ["Parameter"]
 
@@ -158,7 +159,9 @@ class Parameter():
         else:
             self._factor_limits = limits
     
-    
+    def copy(self):
+        """ A deep copy"""
+        return copy.deepcopy(self)
     
     def __add__(self, other):
         if isinstance(other, int) or isinstance(other, float):

@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Iterable, Mapping, Any, Tuple, Union
 import numpy as np
 import collections
 import itertools 
+import copy
 
 __all__ = ["PdfBase"]
 
@@ -82,6 +83,11 @@ class PdfBase(abc.ABC):
     def nbins(self) -> int:
         """Number of bins of the pdf"""
         return len(self._frequencies)
+    
+    
+    def copy(self):
+        """A deep copy"""
+        return copy.deepcopy(self)
     
     def __mul__(self, other):
         """If we multiply by a float or a int, the method returns simply the frequencies multiplied """

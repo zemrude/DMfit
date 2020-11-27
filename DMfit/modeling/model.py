@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Iterable, Mapping, Any, Tuple, Union
 import numpy as np
 import collections
 import itertools 
+import copy
 
 
 __all__ = ["Model"]
@@ -15,15 +16,16 @@ class Model():
      
         self._meta_data = kwargs.copy()
      
+        #We add hard copies, so pdfs, parameters remained untouched
         
         if pdfs is not None:
             for pdf in pdfs:
-                self._add_pdf(pdf)
+                self._add_pdf(pdf.copy())
             
         
         if parameters is not None:    
             for param in parameters:
-                self._add_parameter(param)
+                self._add_parameter(param.copy())
 
         
     def _add_parameter(self, param):
@@ -92,6 +94,11 @@ class Model():
     @property
     def npars(self) -> int:
         return len(self._parameters.keys())
+    
+    def copy(self):
+        """A deep copy"""
+        return copy.deepcopy(self)
+
         
     def __len__(self) -> int:
         #To do check if the _pdfs is initiated
