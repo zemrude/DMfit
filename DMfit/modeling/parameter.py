@@ -60,9 +60,12 @@ class Parameter():
         return self._factor * self._scale
     
     @value.setter
-    def value(self, value: float):
-        self.factor = float(value) / self._scale
- 
+    def value(self, val: float):
+        if not np.isnan(val):
+            self.factor = float(val) / self._scale
+        else:
+            self.factor = 0
+            
     @property
     def scale(self) -> float:
         return self._scale
@@ -83,12 +86,16 @@ class Parameter():
             
     @property
     def factor(self) -> float:
+        
         return self._factor
     
     @factor.setter
     def factor(self, value: float):
-        self._factor = value
-
+        if not np.isnan(value):
+            self._factor = float(value) 
+        else:
+            self._factor = 0
+       
         
     @property
     def fixed(self) -> bool:

@@ -11,7 +11,6 @@ from utils.numba_functions import nb_log, nb_sum, nb_where
 
 LIKELIHOODS = ["Poisson", "Effective"]
 
-HYPOTHESIS = {'H0': 0, 'H1': 1}
             
 class LikelihoodRatioTest:
     def __init__(self, model = None, null_model = None, llh_type = "Poisson", data = None, **kwargs):
@@ -101,16 +100,17 @@ class LikelihoodRatioTest:
         z = {**kwds, **kwargs}
          
             
+        
         #Minimizer work in factor space, not in value space
         
         
-        names, init_values, limits, fixed = np.transpose([(par.name, par.value, par.limits, par.fixed) for par in list(self._models[hypothesis].parameters.values())])
+        names, init_values, limits, fixed = np.transpose([(par.name, par.factor, par.factor_limits, par.fixed) for par in list(self._models[hypothesis].parameters.values())])
 
                
         self._minimizers[hypothesis] = Minuit.from_array_func(self._llhs[hypothesis], init_values, fix = fixed, limit = limits, name = names, **z)
         
         
-        return self.minimizers[hypothesis].migrad(**kwargs) 
+        return self._minimizers[hypothesis].migrad(**kwargs) 
   
 
     @property
@@ -159,6 +159,9 @@ class LikelihoodRatioTest:
             --------------------
             Note: as numba needs to compile in time first call will be slower than usual.
         """
+        if np.any(np.isnan(pars)):
+            raise ValueError("One of the pass parameters is a nan")
+            
         if model is None:
             raise ValueError("Model {H0, H1} not specified!")
             
