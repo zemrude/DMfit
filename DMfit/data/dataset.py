@@ -82,6 +82,10 @@ class DataSet():
        
         self.values = list(map(nb_random_poisson, ntotal * np.asarray(model)))
 
+    def asimov(self, ntotal, model):
+        "Makes a Asimov sample"
+       
+        self.values = list(ntotal * np.asarray(model))
 
     def __str__(self):
         lines = []
