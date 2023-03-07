@@ -94,23 +94,32 @@ class LikelihoodRatioTest:
         
     def fit(self, hypothesis, **kwargs):
         
-        kwds = dict()
-        kwds['errordef'] = Minuit.LIKELIHOOD 
-        #kwds['print_level'] = 2.
-        z = {**kwds, **kwargs}
-         
-            
+        # kwds = dict()
+        # kwds['errordef'] = Minuit.LIKELIHOOD
+        # kwds['print_level'] = 2.
+        # z = {**kwds, **kwargs}
         
         #Minimizer work in factor space, not in value space
         
         
         names, init_values, limits, fixed = np.transpose([(par.name, par.factor, par.factor_limits, par.fixed) for par in list(self._models[hypothesis].parameters.values())])
 
-               
-        self._minimizers[hypothesis] = Minuit.from_array_func(self._llhs[hypothesis], init_values, fix = fixed, limit = limits, name = names, **z)
+        # self._minimizers[hypothesis] = Minuit.from_array_func(self._llhs[hypothesis], init_values, fix = fixed, limit = limits, name = names, **z)
+        ## Somehow fixed and limits can not be set at the initializer in iminuit version 2.21
+        # self._minimizers[hypothesis] = Minuit(self._llhs[hypothesis], init_values, fixed = fixed, limits = limits, name = names, **z)
         
-        
-        return self._minimizers[hypothesis].migrad(**kwargs) 
+        self._minimizers[hypothesis] = Minuit(self._llhs[hypothesis], init_values, name=names)
+        self._minimizers[hypothesis].fixed =  fixed
+        self._minimizers[hypothesis].limits = limits
+        self._minimizers[hypothesis].errordef = Minuit.LIKELIHOOD
+        self._minimizers[hypothesis].print_level = 0
+
+        # perform the fit and manually update the parameter in the models to the bestfit
+        mingrad_result = self._minimizers[hypothesis].migrad(**kwargs) 
+        for par in mingrad_result.params:
+            self._models[hypothesis].parameters[par.name].value = par.value
+
+        return mingrad_result
   
 
     @property
