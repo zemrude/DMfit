@@ -94,23 +94,32 @@ class LikelihoodRatioTest:
         
     def fit(self, hypothesis, **kwargs):
         
-        kwds = dict()
-        kwds['errordef'] = Minuit.LIKELIHOOD 
-        #kwds['print_level'] = 2.
-        z = {**kwds, **kwargs}
-         
-            
+        # kwds = dict()
+        # kwds['errordef'] = Minuit.LIKELIHOOD
+        # kwds['print_level'] = 2.
+        # z = {**kwds, **kwargs}
         
         #Minimizer work in factor space, not in value space
         
         
         names, init_values, limits, fixed = np.transpose([(par.name, par.factor, par.factor_limits, par.fixed) for par in list(self._models[hypothesis].parameters.values())])
 
-               
-        self._minimizers[hypothesis] = Minuit.from_array_func(self._llhs[hypothesis], init_values, fix = fixed, limit = limits, name = names, **z)
+        # self._minimizers[hypothesis] = Minuit.from_array_func(self._llhs[hypothesis], init_values, fix = fixed, limit = limits, name = names, **z)
+        ## Somehow fixed and limits can not be set at the initializer in iminuit version 2.21
+        # self._minimizers[hypothesis] = Minuit(self._llhs[hypothesis], init_values, fixed = fixed, limits = limits, name = names, **z)
         
-        
-        return self._minimizers[hypothesis].migrad(**kwargs) 
+        self._minimizers[hypothesis] = Minuit(self._llhs[hypothesis], init_values, name=names)
+        self._minimizers[hypothesis].fixed =  fixed
+        self._minimizers[hypothesis].limits = limits
+        self._minimizers[hypothesis].errordef = Minuit.LIKELIHOOD
+        self._minimizers[hypothesis].print_level = 0
+
+        # perform the fit and manually update the parameter in the models to the bestfit
+        mingrad_result = self._minimizers[hypothesis].migrad(**kwargs) 
+        for par in mingrad_result.params:
+            self._models[hypothesis].parameters[par.name].value = par.value
+
+        return mingrad_result
   
 
     @property
@@ -130,7 +139,16 @@ class LikelihoodRatioTest:
     @property
     def TS(self):
         return 2 * (self.minLlhH0 - self.minLlhH1)
-        
+
+    def TS_llhinterval(self, param_val, parname_fit, parname_fix):
+        self.models['H0'].parameters[parname_fix].value = param_val
+        self.fit("H0")
+        self.fit("H1")
+        if self.models['H1'].parameters[parname_fit].value > param_val:
+            T = 0
+        else:    
+            T = self.TS
+        return T    
             
     def llhH0(self, pars):
         """
@@ -184,8 +202,62 @@ class LikelihoodRatioTest:
     
     
     def upperlimit(self):
+        
         return 0
     
+    def upperlimit_llhinterval(self, parname_fit, parname_fix, conf_level):        
+        #Default C.L.
+        deltaTS = 1.64
+        if conf_level==90:
+            deltaTS = 1.64
+        elif conf_level==95:
+            deltaTS = 2.71
+
+        # First, we try to find a range [param_low, param_up]
+        # that contains the upper limit value
+
+        self.fit('H1')
+        param_up = self.models['H1'].parameters[parname_fit].value
+        dTS = 0
+        nIterations = 0
+
+        while(dTS<deltaTS) and (nIterations<1000):                
+            nIterations += 1            
+            if param_up < 1e-14:
+                param_up = 1e-14
+            param_up=param_up+3.*np.abs(param_up)                        
+            dTS = self.TS_llhinterval(param_up, parname_fit, parname_fix)
+
+        if (dTS<deltaTS):
+            raise RuntimeError('Can not find upper value to perform bisection search due to maximum number of iteration reached')    
+        param_low = param_up/4.
+
+        # enter the bisection search for upperlimit within a tolerance:
+        # note: code below only for increasing function which should be the case for the test statistics as the function of signal fraction.
+
+        # param_tol = 5e-8
+        ts_tol = 0.001
+        nIterations = 0
+        param_mean = (param_up+param_low)/2. 
+        while ( abs(dTS - deltaTS) > ts_tol ) and (nIterations<500):
+            nIterations += 1
+            param_mean = (param_up+param_low)/2.            
+            dTS = self.TS_llhinterval(param_mean, parname_fit, parname_fix)
+            if dTS == deltaTS:
+                return dTS
+            elif dTS < deltaTS:
+                param_low = param_mean
+            else:
+                param_up = param_mean
+
+        if nIterations==500:
+            print('Warning: maximum number of iteration reached in bisection seacch')
+        
+        # print('upper limit: {}'.format(param_mean))
+        # print('TS value at the output upper limit: {}'.format(dTS))
+
+        return param_mean
+
         
     def __str__(self):
         lines = []
